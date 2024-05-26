@@ -1,0 +1,4 @@
+chess==1.10.0
+discord.py==2.3.2
+python-dotenv==1.0.1
+Requests==2.32.2
