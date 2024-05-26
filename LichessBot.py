@@ -8,6 +8,8 @@ import chess.pgn
 import pgntofen
 import os
 from dotenv import load_dotenv
+import schedule
+import time
 
 load_dotenv()
 
@@ -18,6 +20,17 @@ puzzleTime = datetime.time(hour=12, minute = 00, second = 30)
 
 r = requests.get("https://lichess.org/api/puzzle/daily").json()
 y = json.dumps(r)
+
+solutionStartLoc = y.find("solution")
+themeStartLoc = y.find("theme")
+solution = y[solutionStartLoc:themeStartLoc]
+cleanSolution = solution[13:-5]
+cleanerSolution = cleanSolution.replace('"', "")
+finalSolution = cleanerSolution.replace(',', '')
+maskedSolution = "||" + finalSolution + "||"
+accepted_solutions = {finalSolution, maskedSolution}
+
+input = str(finalSolution)
 
 pgnstartloc = y.find("pgn")
 clockstartloc = y.find("clock")
@@ -39,20 +52,25 @@ else:
     whiteTrailer = '?turn=white&pov=white'
     fenURL += whiteTrailer
 
+def job():
+    schedule.every(4).hours.do(r = requests.get("https://lichess.org/api/puzzle/daily").json())
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
 @tasks.loop(time=puzzleTime)
 async def PostPuzzle():
     channel = client.get_channel(os.getenv("TNCORD-CHESS-CHANNEL"))
     await channel.send(fenURL)
     
-#-----------------TESTING------------------------
-#@client.event
-#async def on_message(message):
-#    if message.author == client.user:
-#       return
-#    if message.content == 'ping':
-#        
-#        await message.channel.send(fenURL)       
-#-----------------TESTING------------------------
+@client.event
+async def on_message(message):
+    reply_author = None if message.reference is None or client.get_channel(message.reference.channel_id) is None  \
+    else (await client.get_channel(message.reference.channel_id).fetch_message(message.reference.message_id)).author
+    if client.user in message.mentions and reply_author == client.user:
+        if message.content.lower() in accepted_solutions:
+            await message.add_reaction("✅")
+        else: await message.add_reaction("❌")
 
 @client.event
 async def on_ready():
