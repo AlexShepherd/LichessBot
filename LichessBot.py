@@ -14,7 +14,7 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
-puzzleTime = datetime.time(hour=12, minute = 0, second = 0)
+puzzleTime = datetime.time(hour=12, minute = 00, second = 30)
 
 r = requests.get("https://lichess.org/api/puzzle/daily").json()
 y = json.dumps(r)
@@ -42,17 +42,18 @@ else:
 @tasks.loop(time=puzzleTime)
 async def PostPuzzle():
     channel = client.get_channel(os.getenv("TNCORD-CHESS-CHANNEL"))
+    await channel.send(fenURL)
     
 #-----------------TESTING------------------------
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
-    if message.content == 'ping':
-        
-        await message.channel.send(fenURL)
-        
+#@client.event
+#async def on_message(message):
+#    if message.author == client.user:
+#       return
+#    if message.content == 'ping':
+#        
+#        await message.channel.send(fenURL)       
 #-----------------TESTING------------------------
+
 @client.event
 async def on_ready():
     if not PostPuzzle.is_running():
